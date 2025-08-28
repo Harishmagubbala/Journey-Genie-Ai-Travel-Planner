@@ -1,0 +1,316 @@
+{
+  "name": "Journey Genie: Ai Travel Planner",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.email }}",
+        "subject": "Travel Itinery",
+        "message": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        704,
+        -208
+      ],
+      "id": "16ec61ae-fadb-400e-8e1e-1c1b5f9ea68a",
+      "name": "Send a message",
+      "webhookId": "df1e3d01-16f1-496e-a18b-2c3e98f3b4b8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "IBRFCt4tdR3IaIH6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst updatedItems = items.map((item) => {\n  let output = item.json.output || \"\";\n\n  // ✅ Remove unwanted ```html or similar prefixes\n  output = output.replace(/```html/i, \"\").replace(/```/g, \"\").trim();\n\n  // ✅ Remove <style>...</style> and <script>...</script>\n  output = output.replace(/<style[\\s\\S]*?<\\/style>/gi, \"\");\n  output = output.replace(/<script[\\s\\S]*?<\\/script>/gi, \"\");\n\n  // ✅ Make headings bold in HTML (for Gmail)\n  output = output.replace(/<h([1-6])[^>]*>(.*?)<\\/h\\1>/gi, \"<h$1><b>$2</b></h$1>\");\n\n  // ✅ Create plain text version (line by line, good for Google Sheets)\n  let plainText = output\n    .replace(/<br\\s*\\/?>/gi, \"\\n\")       // <br> → new line\n    .replace(/<\\/p>/gi, \"\\n\")            // </p> → new line\n    .replace(/<\\/li>/gi, \"\\n\")           // </li> → new line\n    .replace(/<\\/h[1-6]>/gi, \"\\n\")       // </h1>..</h6> → new line\n    .replace(/<\\/div>/gi, \"\\n\")          // </div> → new line\n    .replace(/<[^>]+>/g, \"\")             // remove remaining HTML tags\n    .replace(/\\n\\s*\\n\\s*\\n/g, \"\\n\\n\")    // collapse multiple blank lines\n    .trim();\n\n  return {\n    htmlText: output,   // ✅ Clean HTML (headings bold for Gmail)\n    plainText           // ✅ Plain text (for Google Sheets)\n  };\n});\n\nreturn updatedItems;\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -208
+      ],
+      "id": "4378683f-44cf-4165-bdbc-50e355fe5c11",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a069c315-c700-4c4e-9d25-d74c486309ce",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        -208
+      ],
+      "id": "45160451-10e2-4fca-85c3-395237c8b4e6",
+      "name": "Webhook",
+      "webhookId": "a069c315-c700-4c4e-9d25-d74c486309ce"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Full Name: {{ $json.body.fullName }}\nEmail: {{ $json.body.email }}\nDestination: {{ $json.body.destination }}\nCurrent City: {{ $json.body.currentCity }}\nStart Date: {{ $json.body.startDate }}\nDuration of Stay (days): {{ $json.body.duration }}\nBudget: {{ $json.body.budget }}\nNumber of People: {{ $json.body.numberOfPeople }}\nMode of Transport: {{ $json.body.transport }}\nAccommodation Preference: {{ $json.body.accommodation }}\nSpecial Interests: {{ $json.body.notes }}\n\nTASK:\nGenerate a complete professional HTML email travel itinerary for the above details. \nThe output must be in **pure HTML (inline styling)**, not Markdown. \nMake it visually appealing, aesthetic, and professional.\nFORMAT REQUIREMENTS: - A welcome section: \"Welcome {{ $json.body.fullName }} to your dream trip to {{ $json.body.destination }}!\" - Add a **full-width, high-quality photo of the destination** at the top (use an online stock photo URL). - Greeting: mention the name in bold and highlight the destination. - Sections to include, each styled with spacing and headings: 1. **Overview of the Trip** (short summary) 2. **Travel & Logistics** (transport, accommodation, city info) 3. **Suggested Day-by-Day Itinerary** (plan each day briefly, highlight special interests, mention costs in ₹ INR) 4. **Budget Breakdown** (Accommodation, Food, Transport, Activities — all in INR currency with mid-range pricing) 5. **Interests & Activities** (based on {{ $json.body.notes }}) 6. **Preparation Checklist** (documents, clothing, essentials) 7. **Travel Tips & Suggestions** (personalized tips for {{ $json.body.specialInterests }})\n\nIMAGE REQUIREMENT:\n- At the very top, insert a **full-width, high-quality landscape photo** that perfectly matches the destination ({{ $json.body.destination }}).  \n- The photo **must NOT be cracked, broken, distorted, or AI-generated artifacts**.  \n- Use a **reliable stock image URL (Unsplash, Pexels, Pixabay, or similar)** that visually represents the destination in the best way.  \n- Example format:\n  ```html\n  <img src=\"https://source.unsplash.com/1600x500/?{{ $json.body.destination }}\" \n       alt=\"{{ $json.body.destination }}\" \n       style=\"width:100%;height:auto;border-radius:8px;margin-bottom:20px;\" />\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -80,
+        -208
+      ],
+      "id": "06b884ed-34f9-46d7-9788-3bff63a078e3",
+      "name": "AI Agent",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1KQchWvDMEGMgHynIBi-nCvJo9g_fyy4Y5b8lPNGwFPo",
+          "mode": "list",
+          "cachedResultName": "Travelers Details",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KQchWvDMEGMgHynIBi-nCvJo9g_fyy4Y5b8lPNGwFPo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KQchWvDMEGMgHynIBi-nCvJo9g_fyy4Y5b8lPNGwFPo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Current City"
+          ],
+          "schema": [
+            {
+              "id": "Current City",
+              "displayName": "Current City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Current City",
+              "displayName": "Current City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Start Date",
+              "displayName": "Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Duration(in days)",
+              "displayName": "Duration(in days)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No of People ",
+              "displayName": "No of People ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Transport Type ",
+              "displayName": "Transport Type ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Accommodation Preference",
+              "displayName": "Accommodation Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preferences",
+              "displayName": "Preferences",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Output",
+              "displayName": "Output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        496,
+        -208
+      ],
+      "id": "cabc525c-6719-40c7-82cf-9c5f1bb132f2",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nKoL8gilWAcTIi4g",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "efce3466-67df-4831-9ad8-9f9a4f1c1da1",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ktgYGHyeNsqtgSgM",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f25ffda7-c3b1-407b-9f2b-a668e612e233",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a5ab97cfa6080da7e06bb286bb1f699f3a3f3c12c7f3552d89ae844a6ca75175"
+  },
+  "id": "Wy0x3gPNlcQx0uEO",
+  "tags": []
+}
